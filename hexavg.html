@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html>
+    <!--
+        This is a tiny tool that I wrote for my Chemistry class. We needed to average color codes,
+        but we couldn't just average the hex codes, and we had to average the R, G, and B values
+        separately, so I wrote this tool. Hopefully it becomes useful to someone else some day!
+    -->
+    
+    <head>
+        <title>Hex Code Averager</title>
+        
+        <style>
+            html, body {
+                color: white;
+                background-color: #1f2120;
+                margin: 0;
+                padding: 0;
+                font-family: Helvetica;
+                width: 100%;
+                height: 100%;
+                overflow-y: hidden;
+            }
+        
+            h2 {
+                width: 100%;
+                text-align: center;
+                margin-top: 4rem;
+            }
+            
+            input {
+                padding: 0.5rem;
+                background-color: transparent;
+                color: white;
+                border: none;
+                border-bottom: 1px solid white;
+                outline: none;
+                height: 1.5rem;
+                transition: background-color 0.25s ease;
+            }
+            
+            input:focus {
+                background-color: rgba(255, 255, 255, 0.1);
+            }
+            
+            .inputs, .output, .final {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+            }
+            
+            .inputs input, .inputs button, .output input, .output button, .final button {
+                width: 20%;
+                margin: 0.5rem;
+            }
+            
+            button {
+                color: white;
+                background-color: transparent;
+                transition: background-color 0.25s ease;
+                border: 1px solid rgba(255, 255, 255, 0.25);
+                padding: 0.5rem;
+                cursor: pointer;
+                font-size: 12pt;
+                border-radius: 4px;
+                outline: none;
+            }
+            
+            button:hover {
+                background-color: rgba(255, 255, 255, 0.1);
+            }
+            
+            .output p {
+                font-size: 14pt;
+            }
+            
+            .output input:hover {
+                background-color: rgba(255, 255, 255, 0.1);
+                cursor: pointer;
+            }
+            
+            .ok, .ok:hover {
+                background-color: green;
+            }
+        </style>
+    </head>
+    <body>
+        <h2>Hex Code Averager</h2>
+        
+        <div class="inputs">
+            <input type="text" placeholder="Hex Code 1" id="hexcode1" />
+            <input type="text" placeholder="Hex Code 2" id="hexcode2" />
+            <input type="text" placeholder="Hex Code 3" id="hexcode3" />
+            <button type="button" id="go">Average!</button>
+        </div>
+        
+        <div class="output">
+            <p>Output:</p>
+            <input type="text" placeholder="#000000" disabled id="output" />
+            <button type="button" id="copier">Copy to Clipboard</button>
+        </div>
+        
+        <div class="final">
+            <button type="button" id="urlcopy">Copy direct URL</button>
+        </div>
+        
+        <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/uglify-js@3.19.3/lib/minify.js"></script>
+        <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/uglify-js@3.19.3/lib/utils.js"></script>
+        <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/uglify-js@3.19.3/lib/ast.js"></script>
+        <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/uglify-js@3.19.3/lib/parse.js"></script>
+        <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/uglify-js@3.19.3/lib/transform.js"></script>
+        <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/uglify-js@3.19.3/lib/scope.js"></script>
+        <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/uglify-js@3.19.3/lib/output.js"></script>
+        <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/uglify-js@3.19.3/lib/compress.js"></script>
+        <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/uglify-js@3.19.3/lib/propmangle.js"></script>
+        
+        <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/html-minifier-terser@7.2.0/dist/htmlminifier.umd.bundle.js"></script>
+        
+        <script type="text/javascript" id="js">
+            const HEX_REGEX = /^(?:#|0x)/gm;
+            const RAW_RGB_REGEX = /^(\d+)\s*(?:,|\s)\s*(\d+)\s*(?:,|\s)\s*(\d+)(?:\s*(?:,|\s)\s*(\d+))?$/gm;
+            const RGBA_REGEX = /^(?:(?!rgb).)*?rgba?(?:\s+)?\((\d+)(?:\s+)?(?:,|\s)(?:\s+)?(\d+)(?:\s+)?(?:,|\s)(?:\s+)?(\d+)(?:\s+)?(?:(?:\s+)?(?:,|\s)(?:\s+)?(\d+))?\).*/gm;
+        
+            const hexcode1 = document.getElementById("hexcode1");
+            const hexcode2 = document.getElementById("hexcode2");
+            const hexcode3 = document.getElementById("hexcode3");
+            const go = document.getElementById("go");
+            const output = document.getElementById("output");
+            const copier = document.getElementById("copier");
+            const urlCopier = document.getElementById("urlcopy");
+            
+            let timeout;
+            let urlTimeout;
+            
+            const uglifyOptions = {};
+            
+            const htmlMinifyOptions = {
+                minifyCSS: true,
+                collapseWhitespace: true,
+            };
+            
+            const parseFromString = (str) => {
+                str = str.toLowerCase();
+                
+                if (str.match(RAW_RGB_REGEX)) {
+                    str = str.replace(RAW_RGB_REGEX, "$1;$2;$3");
+                    
+                    const [r, g, b] = str.split(";");
+                    
+                    return [parseInt(r), parseInt(g), parseInt(b)];
+                }
+                
+                if (str.includes("rgb")) {
+                    str = str.replace(RGBA_REGEX, "$1;$2;$3");
+                    
+                    const [r, g, b] = str.split(";");
+                    
+                    return [parseInt(r), parseInt(g), parseInt(b)];
+                }
+                
+                return toRgb(parseInt(str.replace(HEX_REGEX, ""), 16));
+            };
+            
+            const toRgb = (hex) => {
+                const r = (hex >> 16) & 255;
+                const g = (hex >> 8) & 255;
+                const b = hex & 255;
+                
+                return [r, g, b];
+            };
+            
+            const averageRgb = (colors) => {
+                let r = 0;
+                let g = 0;
+                let b = 0;
+                
+                for (const color of colors) {
+                    r += color[0];
+                    g += color[1];
+                    b += color[2];
+                }
+                
+                return [Math.round(r / colors.length), Math.round(g / colors.length), Math.round(b / colors.length)];
+            };
+            
+            const toHex = (rgb) => {
+                const hex = (rgb[0] << 16) | (rgb[1] << 8) | rgb[2];
+                
+                return "#" + (0x1000000 + hex).toString(16).slice(1);
+            };
+            
+            const average = () => {
+                const colors = [parseFromString(hexcode1.value), parseFromString(hexcode2.value), parseFromString(hexcode3.value)];
+                const average = averageRgb(colors);
+                const hex = toHex(average);
+                
+                output.value = hex;
+            };
+            
+            const copy = () => {
+                output.select();
+                output.setSelectionRange(0, 99999);
+                
+                navigator.clipboard.writeText(output.value);
+                
+                copier.classList.add("ok");
+                
+                if (timeout) clearTimeout(timeout);
+                
+                timeout = setTimeout(() => {
+                    copier.classList.remove("ok");
+                }, 250);
+            };
+            
+            const copyUrl = async () => {
+                const inp = document.createElement("input");
+                
+                inp.type = "text";
+                
+                const base = document.cloneNode(true);
+                const script = base.getElementById("js");
+                const scriptText = script.innerText;
+                const res = minify(scriptText, uglifyOptions);
+                
+                script.innerText = res.code;
+                
+                const data = "<!DOCTYPE html>\n" + base.documentElement.innerHTML;
+                const minified = await HTMLMinifier.minify(data, htmlMinifyOptions);
+                const base64 = btoa(minified);
+                const url = "data:text/html;base64," + base64;
+                
+                inp.value = url;
+                inp.select();
+                inp.setSelectionRange(0, 99999);
+                
+                navigator.clipboard.writeText(inp.value);
+                
+                urlCopier.classList.add("ok");
+                
+                if (urlTimeout) clearTimeout(urlTimeout);
+                
+                urlTimeout = setTimeout(() => {
+                    urlCopier.classList.remove("ok");
+                }, 250);
+            };
+            
+            copier.addEventListener("click", copy);
+            go.addEventListener("click", average);
+            urlCopier.addEventListener("click", copyUrl);
+        </script>
+    </body>
+</html>
