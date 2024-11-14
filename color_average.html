@@ -82,21 +82,40 @@
             .ok, .ok:hover {
                 background-color: green;
             }
+            
+            .group {
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                justify-content: flex-start;
+                width: calc(20% + 1rem);
+            }
+            
+            .group input {
+                margin: 0;
+                padding: 0;
+            }
         </style>
     </head>
     <body>
         <h2>Color Averager</h2>
         
         <div class="inputs">
-            <input type="text" placeholder="Color Code 1" id="hexcode1" />
-            <input type="text" placeholder="Color Code 2" id="hexcode2" />
-            <input type="text" placeholder="Color Code 3" id="hexcode3" />
+            <input type="text" placeholder="Color Code 1" id="color1" />
+            <input type="text" placeholder="Color Code 2" id="color2" />
+            <input type="text" placeholder="Color Code 3" id="color3" />
             <button type="button" id="go">Average!</button>
         </div>
         
         <div class="output">
             <p>Output:</p>
             <input type="text" placeholder="#000000" disabled id="output" />
+            <div class="group">
+                <input type="checkbox" id="rgbMode" />
+                <label for="rgbaMode">
+                    RGB Mode
+                </label>
+            </div>
             <button type="button" id="copier">Copy to Clipboard</button>
         </div>
         
@@ -121,13 +140,14 @@
             const RAW_RGB_REGEX = /^(\d+)\s*(?:,|\s)\s*(\d+)\s*(?:,|\s)\s*(\d+)(?:\s*(?:,|\s)\s*(\d+))?$/gm;
             const RGBA_REGEX = /^(?:(?!rgb).)*?rgba?(?:\s+)?\((\d+)(?:\s+)?(?:,|\s)(?:\s+)?(\d+)(?:\s+)?(?:,|\s)(?:\s+)?(\d+)(?:\s+)?(?:(?:\s+)?(?:,|\s)(?:\s+)?(\d+))?\).*/gm;
         
-            const hexcode1 = document.getElementById("hexcode1");
-            const hexcode2 = document.getElementById("hexcode2");
-            const hexcode3 = document.getElementById("hexcode3");
+            const color1 = document.getElementById("color1");
+            const color2 = document.getElementById("color2");
+            const color3 = document.getElementById("color3");
             const go = document.getElementById("go");
             const output = document.getElementById("output");
             const copier = document.getElementById("copier");
             const urlCopier = document.getElementById("urlcopy");
+            const rgbMode = document.getElementById("rgbMode");
             
             let timeout;
             let urlTimeout;
@@ -183,16 +203,20 @@
                 return [Math.round(r / colors.length), Math.round(g / colors.length), Math.round(b / colors.length)];
             };
             
-            const toHex = (rgb) => {
+            const stringifyAverage = (rgb) => {
+                if (rgbMode.checked) {
+                    return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+                }
+                
                 const hex = (rgb[0] << 16) | (rgb[1] << 8) | rgb[2];
                 
                 return "#" + (0x1000000 + hex).toString(16).slice(1);
             };
             
             const average = () => {
-                const colors = [parseFromString(hexcode1.value), parseFromString(hexcode2.value), parseFromString(hexcode3.value)];
+                const colors = [parseFromString(color1.value), parseFromString(color2.value), parseFromString(color3.value)];
                 const average = averageRgb(colors);
-                const hex = toHex(average);
+                const hex = stringifyAverage(average);
                 
                 output.value = hex;
             };
